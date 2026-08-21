@@ -5,7 +5,9 @@
 | Name | Columns | Comment | Type |
 | ---- | ------- | ------- | ---- |
 | [migration](migration.md) | 3 |  | table |
-| [authors](authors.md) | 3 |  | table |
+| [item](item.md) | 5 |  | table |
+| [access_log](access_log.md) | 3 |  | table |
+| [item_frecency](item_frecency.md) | 8 |  | view |
 
 ## Relations
 

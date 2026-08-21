@@ -54,23 +54,43 @@
       "def": "CREATE TABLE migration (\n            id INTEGER PRIMARY KEY,\n            file_name TEXT NOT NULL UNIQUE,\n            migrate_time TEXT NOT NULL\n        ) STRICT"
     },
     {
-      "name": "authors",
+      "name": "item",
       "type": "table",
       "columns": [
         {
           "name": "id",
           "type": "INTEGER",
-          "nullable": true
+          "nullable": false
         },
         {
-          "name": "name",
+          "name": "item",
           "type": "TEXT",
           "nullable": false
         },
         {
-          "name": "bio",
-          "type": "TEXT",
-          "nullable": true
+          "name": "base_score",
+          "type": "INTEGER",
+          "nullable": false
+        },
+        {
+          "name": "create_time",
+          "type": "INTEGER",
+          "nullable": false
+        },
+        {
+          "name": "update_time",
+          "type": "INTEGER",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_item_1",
+          "def": "UNIQUE (item)",
+          "table": "item",
+          "columns": [
+            "item"
+          ]
         }
       ],
       "constraints": [
@@ -78,13 +98,145 @@
           "name": "id",
           "type": "PRIMARY KEY",
           "def": "PRIMARY KEY (id)",
-          "table": "authors",
+          "table": "item",
           "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "sqlite_autoindex_item_1",
+          "type": "UNIQUE",
+          "def": "UNIQUE (item)",
+          "table": "item",
+          "columns": [
+            "item"
+          ]
+        }
+      ],
+      "def": "CREATE TABLE item (\n  id INTEGER PRIMARY KEY NOT NULL,\n  item TEXT NOT NULL UNIQUE,\n  base_score INTEGER NOT NULL,\n  create_time INTEGER NOT NULL,\n  update_time INTEGER NOT NULL\n) STRICT"
+    },
+    {
+      "name": "access_log",
+      "type": "table",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false
+        },
+        {
+          "name": "item_id",
+          "type": "INTEGER",
+          "nullable": false
+        },
+        {
+          "name": "access_time",
+          "type": "INTEGER",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "access_log_item_time_idx",
+          "def": "CREATE INDEX access_log_item_time_idx\n  ON access_log (item_id, access_time)",
+          "table": "access_log",
+          "columns": [
+            "item_id",
+            "access_time"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "id",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "access_log",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "- (Foreign key ID: 0)",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (item_id) REFERENCES item (id) ON UPDATE NO ACTION ON DELETE CASCADE MATCH NONE",
+          "table": "access_log",
+          "referenced_table": "item",
+          "columns": [
+            "item_id"
+          ],
+          "referenced_columns": [
             "id"
           ]
         }
       ],
-      "def": "CREATE TABLE authors (\n  id integer PRIMARY KEY AUTOINCREMENT,\n  name text NOT NULL,\n  bio text\n)"
+      "def": "CREATE TABLE access_log (\n  id INTEGER PRIMARY KEY NOT NULL,\n  item_id INTEGER NOT NULL REFERENCES item(id) ON DELETE CASCADE,\n  access_time INTEGER NOT NULL\n) STRICT"
+    },
+    {
+      "name": "item_frecency",
+      "type": "view",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": true
+        },
+        {
+          "name": "item",
+          "type": "TEXT",
+          "nullable": true
+        },
+        {
+          "name": "base_score",
+          "type": "INTEGER",
+          "nullable": true
+        },
+        {
+          "name": "create_datetime_rfc3339",
+          "type": "TEXT",
+          "nullable": true
+        },
+        {
+          "name": "update_datetime_rfc3339",
+          "type": "TEXT",
+          "nullable": true
+        },
+        {
+          "name": "access_count",
+          "type": "",
+          "nullable": true
+        },
+        {
+          "name": "last_access_datetime_rfc3339",
+          "type": "",
+          "nullable": true
+        },
+        {
+          "name": "frecency_score",
+          "type": "REAL",
+          "nullable": true
+        }
+      ],
+      "def": "CREATE VIEW item_frecency AS\nSELECT\n  i.id,\n  i.item,\n  i.base_score,\n  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.create_time, 'unixepoch') AS TEXT)\n    AS create_datetime_rfc3339,\n  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.update_time, 'unixepoch') AS TEXT)\n    AS update_datetime_rfc3339,\n  COUNT(l.id) AS access_count,\n  CASE\n    WHEN MAX(l.access_time) IS NULL THEN NULL\n    ELSE CAST(\n      strftime('%Y-%m-%dT%H:%M:%SZ', MAX(l.access_time), 'unixepoch') AS TEXT\n    )\n  END\n    AS last_access_datetime_rfc3339,\n  CAST(\n    i.base_score + COALESCE(\n      SUM(\n        1.0 / (1.0 + MAX(unixepoch() - l.access_time, 0) / 604800.0)\n      ),\n      0\n    ) AS REAL\n  ) AS frecency_score\nFROM item AS i\nLEFT JOIN access_log AS l\n  ON l.item_id = i.id\nGROUP BY\n  i.id,\n  i.item,\n  i.base_score,\n  i.create_time,\n  i.update_time",
+      "referenced_tables": [
+        "item",
+        "access_log"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "access_log",
+      "columns": [
+        "item_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "item",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (item_id) REFERENCES item (id) ON UPDATE NO ACTION ON DELETE CASCADE MATCH NONE"
     }
   ],
   "driver": {

@@ -8,6 +8,9 @@ sql:
       - options:
           db_crate: rusqlite
           output: queries.rs
+          overrides:
+            - column: .last_access_datetime_rfc3339
+              rs_type: Option<String>
         out: ../src
         plugin: sqlc-gen-rust
     engine: sqlite

@@ -15,111 +15,46 @@ impl RusqliteClient for rusqlite::Transaction<'_> {
         rusqlite::Connection::prepare(&self, sql)
     }
 }
-pub struct GetAuthorRow {
+pub struct QueryItemsRow {
     pub id: i64,
-    pub name: String,
-    pub bio: Option<String>,
+    pub item: String,
+    pub base_score: i64,
+    pub create_datetime_rfc_3339: String,
+    pub update_datetime_rfc_3339: String,
+    pub access_count: i64,
+    pub last_access_datetime_rfc_3339: Option<String>,
+    pub frecency_score: f64,
 }
-impl GetAuthorRow {
+impl QueryItemsRow {
     pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
         Ok(Self {
             id: row.get(0)?,
-            name: row.get(1)?,
-            bio: row.get(2)?,
+            item: row.get(1)?,
+            base_score: row.get(2)?,
+            create_datetime_rfc_3339: row.get(3)?,
+            update_datetime_rfc_3339: row.get(4)?,
+            access_count: row.get(5)?,
+            last_access_datetime_rfc_3339: row.get(6)?,
+            frecency_score: row.get(7)?,
         })
     }
 }
-pub struct GetAuthor {
-    id: i64,
+pub struct QueryItems<'a> {
+    term: &'a str,
 }
-impl GetAuthor {
-    pub const QUERY: &'static str = r"SELECT id, name, bio FROM authors
-WHERE id = ? LIMIT 1";
+impl<'a> QueryItems<'a> {
+    pub const QUERY: &'static str = r"SELECT id, item, base_score, create_datetime_rfc3339, update_datetime_rfc3339, access_count, last_access_datetime_rfc3339, frecency_score
+FROM item_frecency
+WHERE instr(item, ?1) > 0
+ORDER BY frecency_score DESC";
     pub fn query_str(&self) -> &str {
         Self::QUERY
     }
 }
-impl GetAuthor {
-    pub fn query_one(&self, client: &impl RusqliteClient) -> rusqlite::Result<GetAuthorRow> {
+impl<'a> QueryItems<'a> {
+    pub fn query_many(&self, client: &impl RusqliteClient) -> rusqlite::Result<Vec<QueryItemsRow>> {
         self.prepare(client)?
-            .query_row(self.as_params(), GetAuthorRow::from_row)
-    }
-    pub fn query_opt(
-        &self,
-        client: &impl RusqliteClient,
-    ) -> rusqlite::Result<Option<GetAuthorRow>> {
-        self.prepare(client)?
-            .query_map(self.as_params(), GetAuthorRow::from_row)?
-            .next()
-            .transpose()
-    }
-    pub fn prepare<'conn>(
-        &self,
-        client: &'conn impl RusqliteClient,
-    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
-        client.prepare(self.query_str())
-    }
-    pub fn as_params(&self) -> impl rusqlite::Params {
-        (self.id,)
-    }
-}
-impl GetAuthor {
-    pub const fn builder() -> GetAuthorBuilder<'static, ((),)> {
-        GetAuthorBuilder {
-            fields: ((),),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-pub struct GetAuthorBuilder<'a, Fields = ((),)> {
-    fields: Fields,
-    _phantom: std::marker::PhantomData<&'a ()>,
-}
-impl<'a> GetAuthorBuilder<'a, ((),)> {
-    pub fn id(self, id: i64) -> GetAuthorBuilder<'a, (i64,)> {
-        let ((),) = self.fields;
-        let _phantom = self._phantom;
-        GetAuthorBuilder {
-            fields: (id,),
-            _phantom,
-        }
-    }
-}
-impl<'a> GetAuthorBuilder<'a, (i64,)> {
-    pub fn build(self) -> GetAuthor {
-        let (id,) = self.fields;
-        GetAuthor { id }
-    }
-}
-pub struct ListAuthorsRow {
-    pub id: i64,
-    pub name: String,
-    pub bio: Option<String>,
-}
-impl ListAuthorsRow {
-    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
-        Ok(Self {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            bio: row.get(2)?,
-        })
-    }
-}
-pub struct ListAuthors;
-impl ListAuthors {
-    pub const QUERY: &'static str = r"SELECT id, name, bio FROM authors
-ORDER BY name";
-    pub fn query_str(&self) -> &str {
-        Self::QUERY
-    }
-}
-impl ListAuthors {
-    pub fn query_many(
-        &self,
-        client: &impl RusqliteClient,
-    ) -> rusqlite::Result<Vec<ListAuthorsRow>> {
-        self.prepare(client)?
-            .query_map(self.as_params(), ListAuthorsRow::from_row)?
+            .query_map(self.as_params(), QueryItemsRow::from_row)?
             .collect()
     }
     pub fn prepare<'conn>(
@@ -129,154 +64,34 @@ impl ListAuthors {
         client.prepare(self.query_str())
     }
     pub fn as_params(&self) -> impl rusqlite::Params {
-        ()
+        (self.term,)
     }
 }
-impl ListAuthors {
-    pub const fn builder() -> ListAuthorsBuilder<'static, ()> {
-        ListAuthorsBuilder {
-            fields: (),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-pub struct ListAuthorsBuilder<'a, Fields = ()> {
-    fields: Fields,
-    _phantom: std::marker::PhantomData<&'a ()>,
-}
-impl<'a> ListAuthorsBuilder<'a, ()> {
-    pub fn build(self) -> ListAuthors {
-        let () = self.fields;
-        ListAuthors {}
-    }
-}
-pub struct CreateAuthorRow {}
-impl CreateAuthorRow {
-    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
-        Ok(Self {})
-    }
-}
-pub struct CreateAuthor<'a> {
-    name: &'a str,
-    bio: Option<&'a str>,
-}
-impl<'a> CreateAuthor<'a> {
-    pub const QUERY: &'static str = r"INSERT INTO authors (
-  name, bio
-) VALUES (
-  ?, ?
-)";
-    pub fn query_str(&self) -> &str {
-        Self::QUERY
-    }
-}
-impl<'a> CreateAuthor<'a> {
-    pub fn execute(&self, client: &impl RusqliteClient) -> rusqlite::Result<usize> {
-        self.prepare(client)?.execute(self.as_params())
-    }
-    pub fn prepare<'conn>(
-        &self,
-        client: &'conn impl RusqliteClient,
-    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
-        client.prepare(self.query_str())
-    }
-    pub fn as_params(&self) -> impl rusqlite::Params {
-        (self.name, self.bio)
-    }
-}
-impl<'a> CreateAuthor<'a> {
-    pub const fn builder() -> CreateAuthorBuilder<'a, ((), ())> {
-        CreateAuthorBuilder {
-            fields: ((), ()),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-pub struct CreateAuthorBuilder<'a, Fields = ((), ())> {
-    fields: Fields,
-    _phantom: std::marker::PhantomData<&'a ()>,
-}
-impl<'a, Bio> CreateAuthorBuilder<'a, ((), Bio)> {
-    pub fn name(self, name: &'a str) -> CreateAuthorBuilder<'a, (&'a str, Bio)> {
-        let ((), bio) = self.fields;
-        let _phantom = self._phantom;
-        CreateAuthorBuilder {
-            fields: (name, bio),
-            _phantom,
-        }
-    }
-}
-impl<'a, Name> CreateAuthorBuilder<'a, (Name, ())> {
-    pub fn bio(self, bio: Option<&'a str>) -> CreateAuthorBuilder<'a, (Name, Option<&'a str>)> {
-        let (name, ()) = self.fields;
-        let _phantom = self._phantom;
-        CreateAuthorBuilder {
-            fields: (name, bio),
-            _phantom,
-        }
-    }
-}
-impl<'a> CreateAuthorBuilder<'a, (&'a str, Option<&'a str>)> {
-    pub fn build(self) -> CreateAuthor<'a> {
-        let (name, bio) = self.fields;
-        CreateAuthor { name, bio }
-    }
-}
-pub struct DeleteAuthorRow {}
-impl DeleteAuthorRow {
-    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
-        Ok(Self {})
-    }
-}
-pub struct DeleteAuthor {
-    id: i64,
-}
-impl DeleteAuthor {
-    pub const QUERY: &'static str = r"DELETE FROM authors
-WHERE id = ?";
-    pub fn query_str(&self) -> &str {
-        Self::QUERY
-    }
-}
-impl DeleteAuthor {
-    pub fn execute(&self, client: &impl RusqliteClient) -> rusqlite::Result<usize> {
-        self.prepare(client)?.execute(self.as_params())
-    }
-    pub fn prepare<'conn>(
-        &self,
-        client: &'conn impl RusqliteClient,
-    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
-        client.prepare(self.query_str())
-    }
-    pub fn as_params(&self) -> impl rusqlite::Params {
-        (self.id,)
-    }
-}
-impl DeleteAuthor {
-    pub const fn builder() -> DeleteAuthorBuilder<'static, ((),)> {
-        DeleteAuthorBuilder {
+impl<'a> QueryItems<'a> {
+    pub const fn builder() -> QueryItemsBuilder<'a, ((),)> {
+        QueryItemsBuilder {
             fields: ((),),
             _phantom: std::marker::PhantomData,
         }
     }
 }
-pub struct DeleteAuthorBuilder<'a, Fields = ((),)> {
+pub struct QueryItemsBuilder<'a, Fields = ((),)> {
     fields: Fields,
     _phantom: std::marker::PhantomData<&'a ()>,
 }
-impl<'a> DeleteAuthorBuilder<'a, ((),)> {
-    pub fn id(self, id: i64) -> DeleteAuthorBuilder<'a, (i64,)> {
+impl<'a> QueryItemsBuilder<'a, ((),)> {
+    pub fn term(self, term: &'a str) -> QueryItemsBuilder<'a, (&'a str,)> {
         let ((),) = self.fields;
         let _phantom = self._phantom;
-        DeleteAuthorBuilder {
-            fields: (id,),
+        QueryItemsBuilder {
+            fields: (term,),
             _phantom,
         }
     }
 }
-impl<'a> DeleteAuthorBuilder<'a, (i64,)> {
-    pub fn build(self) -> DeleteAuthor {
-        let (id,) = self.fields;
-        DeleteAuthor { id }
+impl<'a> QueryItemsBuilder<'a, (&'a str,)> {
+    pub fn build(self) -> QueryItems<'a> {
+        let (term,) = self.fields;
+        QueryItems { term }
     }
 }

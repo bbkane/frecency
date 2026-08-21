@@ -44,22 +44,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             let mut conn = rusqlite::Connection::open_in_memory()?;
             frecency::migrate(&mut conn)?;
 
-            let authors = queries::ListAuthors.query_many(&conn)?;
-            println!("authors before insert: {}", authors.len());
-
-            let affected_rows = queries::CreateAuthor::builder()
-                .name("Brian Kernighan")
-                .bio(Some("Co-author of The C Programming Language"))
+            let items = queries::QueryItems::builder()
+                .term(&args.key)
                 .build()
-                .execute(&conn)?;
-            println!("inserted rows: {affected_rows}");
-
-            let author = queries::GetAuthor::builder()
-                .id(conn.last_insert_rowid())
-                .build()
-                .query_one(&conn)?;
-
-            println!("author: {} {:?}", author.name, author.bio);
+                .query_many(&conn)?;
+            println!("matching items: {}", items.len());
             Ok(())
         }
         Commands::Completion { shell } => {
