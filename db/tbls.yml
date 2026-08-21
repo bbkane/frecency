@@ -1,0 +1,5 @@
+dsn: sqlite://./tmp.db
+er:
+  format: svg
+  hideDef: true
+name: frecency Database Schema

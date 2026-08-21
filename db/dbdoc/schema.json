@@ -1,0 +1,94 @@
+{
+  "name": "frecency Database Schema",
+  "tables": [
+    {
+      "name": "migration",
+      "type": "table",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": true
+        },
+        {
+          "name": "file_name",
+          "type": "TEXT",
+          "nullable": false
+        },
+        {
+          "name": "migrate_time",
+          "type": "TEXT",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_migration_1",
+          "def": "UNIQUE (file_name)",
+          "table": "migration",
+          "columns": [
+            "file_name"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "id",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "migration",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "sqlite_autoindex_migration_1",
+          "type": "UNIQUE",
+          "def": "UNIQUE (file_name)",
+          "table": "migration",
+          "columns": [
+            "file_name"
+          ]
+        }
+      ],
+      "def": "CREATE TABLE migration (\n            id INTEGER PRIMARY KEY,\n            file_name TEXT NOT NULL UNIQUE,\n            migrate_time TEXT NOT NULL\n        ) STRICT"
+    },
+    {
+      "name": "authors",
+      "type": "table",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": true
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "nullable": false
+        },
+        {
+          "name": "bio",
+          "type": "TEXT",
+          "nullable": true
+        }
+      ],
+      "constraints": [
+        {
+          "name": "id",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "authors",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "def": "CREATE TABLE authors (\n  id integer PRIMARY KEY AUTOINCREMENT,\n  name text NOT NULL,\n  bio text\n)"
+    }
+  ],
+  "driver": {
+    "name": "sqlite",
+    "database_version": "3.53.2"
+  }
+}
