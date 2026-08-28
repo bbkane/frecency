@@ -1,26 +1,10 @@
 use std::error::Error;
 
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
-use jiff::Timestamp;
-
+use frecency::commands;
 #[allow(warnings)]
 mod queries;
-
-#[derive(Args)]
-struct AddArgs {
-    #[arg(long)]
-    key: String,
-
-    #[arg(long, default_value_t = 0)]
-    base_score: i64,
-
-    #[arg(long, default_value_t = Timestamp::now())]
-    create_time: Timestamp,
-
-    #[arg(long, default_value_t = Timestamp::now())]
-    update_time: Timestamp,
-}
 
 #[derive(Parser)]
 struct Cli {
@@ -34,7 +18,7 @@ enum Commands {
     Version,
 
     #[command(about = "Say hello")]
-    Add(AddArgs),
+    Add(commands::AddArgs),
 
     #[command(about = "Print shell completion scripts")]
     Completion { shell: Shell },
@@ -54,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("Update time: {}", args.update_time.as_second());
 
             let mut conn = rusqlite::Connection::open_in_memory()?;
-            frecency::migrate(&mut conn)?;
+            frecency::db::migrate(&mut conn)?;
 
             let items = queries::QueryItems::builder()
                 .term(&args.key)
