@@ -6,7 +6,7 @@
 <summary><strong>Table Definition</strong></summary>
 
 ```sql
-CREATE TABLE item (
+CREATE TABLE item(
   id INTEGER PRIMARY KEY NOT NULL,
   item TEXT NOT NULL UNIQUE,
   base_score INTEGER NOT NULL,

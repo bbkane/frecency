@@ -6,7 +6,7 @@
 <summary><strong>Table Definition</strong></summary>
 
 ```sql
-CREATE TABLE access_log (
+CREATE TABLE access_log(
   id INTEGER PRIMARY KEY NOT NULL,
   item_id INTEGER NOT NULL REFERENCES item(id) ON DELETE CASCADE,
   access_time INTEGER NOT NULL
@@ -34,7 +34,7 @@ CREATE TABLE access_log (
 
 | Name | Definition |
 | ---- | ---------- |
-| access_log_item_time_idx | CREATE INDEX access_log_item_time_idx<br />  ON access_log (item_id, access_time) |
+| access_log_item_time_idx | CREATE INDEX access_log_item_time_idx ON access_log (item_id, access_time) |
 
 ## Relations
 

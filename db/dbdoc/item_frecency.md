@@ -11,29 +11,20 @@ SELECT
   i.id,
   i.item,
   i.base_score,
-  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.create_time, 'unixepoch') AS TEXT)
-    AS create_datetime_rfc3339,
-  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.update_time, 'unixepoch') AS TEXT)
-    AS update_datetime_rfc3339,
-  COUNT(l.id) AS access_count,
-  CASE
+  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.create_time, 'unixepoch') AS TEXT) AS create_datetime_rfc3339,
+  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.update_time, 'unixepoch') AS TEXT) AS update_datetime_rfc3339,
+  CAST(COUNT(l.id) AS INTEGER) AS access_count,
+  CAST(CASE
     WHEN MAX(l.access_time) IS NULL THEN NULL
-    ELSE CAST(
-      strftime('%Y-%m-%dT%H:%M:%SZ', MAX(l.access_time), 'unixepoch') AS TEXT
-    )
-  END
-    AS last_access_datetime_rfc3339,
-  CAST(
-    i.base_score + COALESCE(
-      SUM(
-        1.0 / (1.0 + MAX(unixepoch() - l.access_time, 0) / 604800.0)
-      ),
-      0
-    ) AS REAL
-  ) AS frecency_score
+    ELSE strftime('%Y-%m-%dT%H:%M:%SZ', MAX(l.access_time), 'unixepoch')
+  END AS TEXT) AS last_access_datetime_rfc3339,
+  CAST(i.base_score
+  + COALESCE(
+    SUM(1.0 / (1.0 + MAX(unixepoch() - l.access_time, 0) / 604800.0)),
+    0
+  ) AS REAL) AS frecency_score
 FROM item AS i
-LEFT JOIN access_log AS l
-  ON l.item_id = i.id
+LEFT JOIN access_log AS l ON l.item_id = i.id
 GROUP BY
   i.id,
   i.item,
@@ -53,8 +44,8 @@ GROUP BY
 | base_score | INTEGER |  | true |  |  |  |
 | create_datetime_rfc3339 | TEXT |  | true |  |  |  |
 | update_datetime_rfc3339 | TEXT |  | true |  |  |  |
-| access_count |  |  | true |  |  |  |
-| last_access_datetime_rfc3339 |  |  | true |  |  |  |
+| access_count | INT |  | true |  |  |  |
+| last_access_datetime_rfc3339 | TEXT |  | true |  |  |  |
 | frecency_score | REAL |  | true |  |  |  |
 
 ## Referenced Tables

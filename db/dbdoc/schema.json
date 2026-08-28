@@ -113,7 +113,7 @@
           ]
         }
       ],
-      "def": "CREATE TABLE item (\n  id INTEGER PRIMARY KEY NOT NULL,\n  item TEXT NOT NULL UNIQUE,\n  base_score INTEGER NOT NULL,\n  create_time INTEGER NOT NULL,\n  update_time INTEGER NOT NULL\n) STRICT"
+      "def": "CREATE TABLE item(\n  id INTEGER PRIMARY KEY NOT NULL,\n  item TEXT NOT NULL UNIQUE,\n  base_score INTEGER NOT NULL,\n  create_time INTEGER NOT NULL,\n  update_time INTEGER NOT NULL\n) STRICT"
     },
     {
       "name": "access_log",
@@ -138,7 +138,7 @@
       "indexes": [
         {
           "name": "access_log_item_time_idx",
-          "def": "CREATE INDEX access_log_item_time_idx\n  ON access_log (item_id, access_time)",
+          "def": "CREATE INDEX access_log_item_time_idx ON access_log (item_id, access_time)",
           "table": "access_log",
           "columns": [
             "item_id",
@@ -170,7 +170,7 @@
           ]
         }
       ],
-      "def": "CREATE TABLE access_log (\n  id INTEGER PRIMARY KEY NOT NULL,\n  item_id INTEGER NOT NULL REFERENCES item(id) ON DELETE CASCADE,\n  access_time INTEGER NOT NULL\n) STRICT"
+      "def": "CREATE TABLE access_log(\n  id INTEGER PRIMARY KEY NOT NULL,\n  item_id INTEGER NOT NULL REFERENCES item(id) ON DELETE CASCADE,\n  access_time INTEGER NOT NULL\n) STRICT"
     },
     {
       "name": "item_frecency",
@@ -203,12 +203,12 @@
         },
         {
           "name": "access_count",
-          "type": "",
+          "type": "INT",
           "nullable": true
         },
         {
           "name": "last_access_datetime_rfc3339",
-          "type": "",
+          "type": "TEXT",
           "nullable": true
         },
         {
@@ -217,7 +217,7 @@
           "nullable": true
         }
       ],
-      "def": "CREATE VIEW item_frecency AS\nSELECT\n  i.id,\n  i.item,\n  i.base_score,\n  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.create_time, 'unixepoch') AS TEXT)\n    AS create_datetime_rfc3339,\n  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.update_time, 'unixepoch') AS TEXT)\n    AS update_datetime_rfc3339,\n  COUNT(l.id) AS access_count,\n  CASE\n    WHEN MAX(l.access_time) IS NULL THEN NULL\n    ELSE CAST(\n      strftime('%Y-%m-%dT%H:%M:%SZ', MAX(l.access_time), 'unixepoch') AS TEXT\n    )\n  END\n    AS last_access_datetime_rfc3339,\n  CAST(\n    i.base_score + COALESCE(\n      SUM(\n        1.0 / (1.0 + MAX(unixepoch() - l.access_time, 0) / 604800.0)\n      ),\n      0\n    ) AS REAL\n  ) AS frecency_score\nFROM item AS i\nLEFT JOIN access_log AS l\n  ON l.item_id = i.id\nGROUP BY\n  i.id,\n  i.item,\n  i.base_score,\n  i.create_time,\n  i.update_time",
+      "def": "CREATE VIEW item_frecency AS\nSELECT\n  i.id,\n  i.item,\n  i.base_score,\n  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.create_time, 'unixepoch') AS TEXT) AS create_datetime_rfc3339,\n  CAST(strftime('%Y-%m-%dT%H:%M:%SZ', i.update_time, 'unixepoch') AS TEXT) AS update_datetime_rfc3339,\n  CAST(COUNT(l.id) AS INTEGER) AS access_count,\n  CAST(CASE\n    WHEN MAX(l.access_time) IS NULL THEN NULL\n    ELSE strftime('%Y-%m-%dT%H:%M:%SZ', MAX(l.access_time), 'unixepoch')\n  END AS TEXT) AS last_access_datetime_rfc3339,\n  CAST(i.base_score\n  + COALESCE(\n    SUM(1.0 / (1.0 + MAX(unixepoch() - l.access_time, 0) / 604800.0)),\n    0\n  ) AS REAL) AS frecency_score\nFROM item AS i\nLEFT JOIN access_log AS l ON l.item_id = i.id\nGROUP BY\n  i.id,\n  i.item,\n  i.base_score,\n  i.create_time,\n  i.update_time",
       "referenced_tables": [
         "item",
         "access_log"
