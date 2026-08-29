@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use rusqlite::{Connection, Result, params};
 use rust_embed::Embed;
 
@@ -6,7 +8,7 @@ use rust_embed::Embed;
 #[folder = "db/migrations/"]
 struct MigrationFiles;
 
-pub fn connect(path: &str) -> Result<Connection> {
+pub fn connect(path: &PathBuf) -> Result<Connection> {
     let mut conn = Connection::open(path)?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     migrate(&mut conn)?;

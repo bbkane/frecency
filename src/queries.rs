@@ -15,47 +15,47 @@ impl RusqliteClient for rusqlite::Transaction<'_> {
         rusqlite::Connection::prepare(&self, sql)
     }
 }
-pub struct QueryItemsRow {
+pub struct InsertOrUpdateItemRow {
     pub id: i64,
-    pub item: String,
-    pub base_score: i64,
-    pub create_datetime_rfc_3339: String,
-    pub update_datetime_rfc_3339: String,
-    pub access_count: i64,
-    pub last_access_datetime_rfc_3339: Option<String>,
-    pub frecency_score: f64,
 }
-impl QueryItemsRow {
+impl InsertOrUpdateItemRow {
     pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
-        Ok(Self {
-            id: row.get(0)?,
-            item: row.get(1)?,
-            base_score: row.get(2)?,
-            create_datetime_rfc_3339: row.get(3)?,
-            update_datetime_rfc_3339: row.get(4)?,
-            access_count: row.get(5)?,
-            last_access_datetime_rfc_3339: row.get(6)?,
-            frecency_score: row.get(7)?,
-        })
+        Ok(Self { id: row.get(0)? })
     }
 }
-pub struct QueryItems<'a> {
-    term: &'a str,
+pub struct InsertOrUpdateItem<'a> {
+    item: &'a str,
+    base_score: i64,
+    create_time: i64,
+    update_time: i64,
 }
-impl<'a> QueryItems<'a> {
-    pub const QUERY: &'static str = r"SELECT id, item, base_score, create_datetime_rfc3339, update_datetime_rfc3339, access_count, last_access_datetime_rfc3339, frecency_score
-FROM item_frecency
-WHERE instr(item, ?1) > 0
-ORDER BY frecency_score DESC";
+impl<'a> InsertOrUpdateItem<'a> {
+    pub const QUERY: &'static str = r"INSERT INTO item(item, base_score, create_time, update_time)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (item) DO UPDATE
+SET
+  item = excluded.item
+RETURNING id";
     pub fn query_str(&self) -> &str {
         Self::QUERY
     }
 }
-impl<'a> QueryItems<'a> {
-    pub fn query_many(&self, client: &impl RusqliteClient) -> rusqlite::Result<Vec<QueryItemsRow>> {
+impl<'a> InsertOrUpdateItem<'a> {
+    pub fn query_one(
+        &self,
+        client: &impl RusqliteClient,
+    ) -> rusqlite::Result<InsertOrUpdateItemRow> {
         self.prepare(client)?
-            .query_map(self.as_params(), QueryItemsRow::from_row)?
-            .collect()
+            .query_row(self.as_params(), InsertOrUpdateItemRow::from_row)
+    }
+    pub fn query_opt(
+        &self,
+        client: &impl RusqliteClient,
+    ) -> rusqlite::Result<Option<InsertOrUpdateItemRow>> {
+        self.prepare(client)?
+            .query_map(self.as_params(), InsertOrUpdateItemRow::from_row)?
+            .next()
+            .transpose()
     }
     pub fn prepare<'conn>(
         &self,
@@ -64,34 +64,165 @@ impl<'a> QueryItems<'a> {
         client.prepare(self.query_str())
     }
     pub fn as_params(&self) -> impl rusqlite::Params {
-        (self.term,)
+        (
+            self.item,
+            self.base_score,
+            self.create_time,
+            self.update_time,
+        )
     }
 }
-impl<'a> QueryItems<'a> {
-    pub const fn builder() -> QueryItemsBuilder<'a, ((),)> {
-        QueryItemsBuilder {
-            fields: ((),),
+impl<'a> InsertOrUpdateItem<'a> {
+    pub const fn builder() -> InsertOrUpdateItemBuilder<'a, ((), (), (), ())> {
+        InsertOrUpdateItemBuilder {
+            fields: ((), (), (), ()),
             _phantom: std::marker::PhantomData,
         }
     }
 }
-pub struct QueryItemsBuilder<'a, Fields = ((),)> {
+pub struct InsertOrUpdateItemBuilder<'a, Fields = ((), (), (), ())> {
     fields: Fields,
     _phantom: std::marker::PhantomData<&'a ()>,
 }
-impl<'a> QueryItemsBuilder<'a, ((),)> {
-    pub fn term(self, term: &'a str) -> QueryItemsBuilder<'a, (&'a str,)> {
-        let ((),) = self.fields;
+impl<'a, BaseScore, CreateTime, UpdateTime>
+    InsertOrUpdateItemBuilder<'a, ((), BaseScore, CreateTime, UpdateTime)>
+{
+    pub fn item(
+        self,
+        item: &'a str,
+    ) -> InsertOrUpdateItemBuilder<'a, (&'a str, BaseScore, CreateTime, UpdateTime)> {
+        let ((), base_score, create_time, update_time) = self.fields;
         let _phantom = self._phantom;
-        QueryItemsBuilder {
-            fields: (term,),
+        InsertOrUpdateItemBuilder {
+            fields: (item, base_score, create_time, update_time),
             _phantom,
         }
     }
 }
-impl<'a> QueryItemsBuilder<'a, (&'a str,)> {
-    pub fn build(self) -> QueryItems<'a> {
-        let (term,) = self.fields;
-        QueryItems { term }
+impl<'a, Item, CreateTime, UpdateTime>
+    InsertOrUpdateItemBuilder<'a, (Item, (), CreateTime, UpdateTime)>
+{
+    pub fn base_score(
+        self,
+        base_score: i64,
+    ) -> InsertOrUpdateItemBuilder<'a, (Item, i64, CreateTime, UpdateTime)> {
+        let (item, (), create_time, update_time) = self.fields;
+        let _phantom = self._phantom;
+        InsertOrUpdateItemBuilder {
+            fields: (item, base_score, create_time, update_time),
+            _phantom,
+        }
+    }
+}
+impl<'a, Item, BaseScore, UpdateTime>
+    InsertOrUpdateItemBuilder<'a, (Item, BaseScore, (), UpdateTime)>
+{
+    pub fn create_time(
+        self,
+        create_time: i64,
+    ) -> InsertOrUpdateItemBuilder<'a, (Item, BaseScore, i64, UpdateTime)> {
+        let (item, base_score, (), update_time) = self.fields;
+        let _phantom = self._phantom;
+        InsertOrUpdateItemBuilder {
+            fields: (item, base_score, create_time, update_time),
+            _phantom,
+        }
+    }
+}
+impl<'a, Item, BaseScore, CreateTime>
+    InsertOrUpdateItemBuilder<'a, (Item, BaseScore, CreateTime, ())>
+{
+    pub fn update_time(
+        self,
+        update_time: i64,
+    ) -> InsertOrUpdateItemBuilder<'a, (Item, BaseScore, CreateTime, i64)> {
+        let (item, base_score, create_time, ()) = self.fields;
+        let _phantom = self._phantom;
+        InsertOrUpdateItemBuilder {
+            fields: (item, base_score, create_time, update_time),
+            _phantom,
+        }
+    }
+}
+impl<'a> InsertOrUpdateItemBuilder<'a, (&'a str, i64, i64, i64)> {
+    pub fn build(self) -> InsertOrUpdateItem<'a> {
+        let (item, base_score, create_time, update_time) = self.fields;
+        InsertOrUpdateItem {
+            item,
+            base_score,
+            create_time,
+            update_time,
+        }
+    }
+}
+pub struct InsertIntoAccessLogRow {}
+impl InsertIntoAccessLogRow {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self {})
+    }
+}
+pub struct InsertIntoAccessLog {
+    item_id: i64,
+    access_time: i64,
+}
+impl InsertIntoAccessLog {
+    pub const QUERY: &'static str = r"INSERT INTO access_log(item_id, access_time) VALUES (?, ?)";
+    pub fn query_str(&self) -> &str {
+        Self::QUERY
+    }
+}
+impl InsertIntoAccessLog {
+    pub fn execute(&self, client: &impl RusqliteClient) -> rusqlite::Result<usize> {
+        self.prepare(client)?.execute(self.as_params())
+    }
+    pub fn prepare<'conn>(
+        &self,
+        client: &'conn impl RusqliteClient,
+    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
+        client.prepare(self.query_str())
+    }
+    pub fn as_params(&self) -> impl rusqlite::Params {
+        (self.item_id, self.access_time)
+    }
+}
+impl InsertIntoAccessLog {
+    pub const fn builder() -> InsertIntoAccessLogBuilder<'static, ((), ())> {
+        InsertIntoAccessLogBuilder {
+            fields: ((), ()),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+pub struct InsertIntoAccessLogBuilder<'a, Fields = ((), ())> {
+    fields: Fields,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+impl<'a, AccessTime> InsertIntoAccessLogBuilder<'a, ((), AccessTime)> {
+    pub fn item_id(self, item_id: i64) -> InsertIntoAccessLogBuilder<'a, (i64, AccessTime)> {
+        let ((), access_time) = self.fields;
+        let _phantom = self._phantom;
+        InsertIntoAccessLogBuilder {
+            fields: (item_id, access_time),
+            _phantom,
+        }
+    }
+}
+impl<'a, ItemId> InsertIntoAccessLogBuilder<'a, (ItemId, ())> {
+    pub fn access_time(self, access_time: i64) -> InsertIntoAccessLogBuilder<'a, (ItemId, i64)> {
+        let (item_id, ()) = self.fields;
+        let _phantom = self._phantom;
+        InsertIntoAccessLogBuilder {
+            fields: (item_id, access_time),
+            _phantom,
+        }
+    }
+}
+impl<'a> InsertIntoAccessLogBuilder<'a, (i64, i64)> {
+    pub fn build(self) -> InsertIntoAccessLog {
+        let (item_id, access_time) = self.fields;
+        InsertIntoAccessLog {
+            item_id,
+            access_time,
+        }
     }
 }

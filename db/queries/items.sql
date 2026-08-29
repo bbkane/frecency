@@ -1,5 +1,10 @@
-/* name: QueryItems :many */
-SELECT *
-FROM item_frecency
-WHERE instr(item, sqlc.arg(term)) > 0
-ORDER BY frecency_score DESC;
+-- name: InsertOrUpdateItem :one
+INSERT INTO item(item, base_score, create_time, update_time)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (item) DO UPDATE
+SET
+  item = excluded.item
+RETURNING id;
+
+-- name: InsertIntoAccessLog :exec
+INSERT INTO access_log(item_id, access_time) VALUES (?, ?);

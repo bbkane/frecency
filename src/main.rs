@@ -1,13 +1,22 @@
-use std::error::Error;
+use std::{error::Error, path::PathBuf};
 
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
-use frecency::commands;
+use frecency::{commands, db};
 #[allow(warnings)]
 mod queries;
 
+fn default_db_path() -> PathBuf {
+    PathBuf::from(std::env::var_os("HOME").expect("HOME environment variable is not set"))
+        .join(".config")
+        .join("frecency.db")
+}
+
 #[derive(Parser)]
 struct Cli {
+    #[arg(long, global = true, default_value_os_t = default_db_path())]
+    db_path: PathBuf,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -27,29 +36,23 @@ enum Commands {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
 
-    match &args.command {
+    if let Some(parent) = args.db_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let mut conn = db::connect(&args.db_path).expect("coud not open db");
+
+    match args.command {
+        Commands::Add(args) => commands::add(&mut conn, args),
+
+        // non-app specific
         Commands::Version => {
             println!("v{}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
-        Commands::Add(args) => {
-            println!("Hello there {}!", args.key);
-
-            println!("Update time: {}", args.update_time.as_second());
-
-            let mut conn = rusqlite::Connection::open_in_memory()?;
-            frecency::db::migrate(&mut conn)?;
-
-            let items = queries::QueryItems::builder()
-                .term(&args.key)
-                .build()
-                .query_many(&conn)?;
-            println!("matching items: {}", items.len());
-            Ok(())
-        }
         Commands::Completion { shell } => {
             generate(
-                *shell,
+                shell,
                 &mut Cli::command(),
                 env!("CARGO_PKG_NAME"),
                 &mut std::io::stdout(),

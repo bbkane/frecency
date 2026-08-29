@@ -1,0 +1,3 @@
+[schemas]
+"db/migrations/**/*.sql" = []
+"db/queries/**/*.sql" = ["db/migrations/001_create.sql"]
