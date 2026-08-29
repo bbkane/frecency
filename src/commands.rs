@@ -32,8 +32,8 @@ pub fn add(conn: &mut Connection, args: AddArgs) -> Result<(), Box<dyn Error>> {
 
     let id = row.id;
     queries::InsertIntoAccessLog::builder()
-        .item_id(id) // You need to get the item_id from the previous query result
-        .access_time(Timestamp::now().as_second())
+        .item_id(id)
+        .access_time(args.create_time.as_second())
         .build()
         .execute(&tx)?;
 
