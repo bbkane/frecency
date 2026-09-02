@@ -41,23 +41,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let mut conn = db::connect(&args.db_path).expect("coud not open db");
+    let mut tx = conn.transaction()?;
 
     match args.command {
-        Commands::Add(args) => commands::add(&mut conn, args),
+        Commands::Add(args) => commands::add(&mut tx, args)?,
 
         // non-app specific
-        Commands::Version => {
-            println!("v{}", env!("CARGO_PKG_VERSION"));
-            Ok(())
-        }
-        Commands::Completion { shell } => {
-            generate(
-                shell,
-                &mut Cli::command(),
-                env!("CARGO_PKG_NAME"),
-                &mut std::io::stdout(),
-            );
-            Ok(())
-        }
+        Commands::Version => println!("v{}", env!("CARGO_PKG_VERSION")),
+        Commands::Completion { shell } => generate(
+            shell,
+            &mut Cli::command(),
+            env!("CARGO_PKG_NAME"),
+            &mut std::io::stdout(),
+        ),
     }
+    tx.commit()?;
+    Ok(())
 }

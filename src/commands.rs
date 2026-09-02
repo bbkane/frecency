@@ -1,7 +1,7 @@
 use crate::queries;
 use clap::Args;
 use jiff::Timestamp;
-use rusqlite::Connection;
+use rusqlite::Transaction;
 use std::error::Error;
 
 #[derive(Args)]
@@ -19,25 +19,21 @@ pub struct AddArgs {
     pub update_time: Timestamp,
 }
 
-pub fn add(conn: &mut Connection, args: AddArgs) -> Result<(), Box<dyn Error>> {
-    let tx = conn.transaction()?;
-
+pub fn add(tx: &mut Transaction<'_>, args: AddArgs) -> Result<(), Box<dyn Error>> {
     let row = queries::InsertOrUpdateItem::builder()
         .item(&args.key)
         .base_score(args.base_score)
         .create_time(args.create_time.as_second())
         .update_time(args.update_time.as_second())
         .build()
-        .query_one(&tx)?;
+        .query_one(tx)?;
 
     let id = row.id;
     queries::InsertIntoAccessLog::builder()
         .item_id(id)
         .access_time(args.create_time.as_second())
         .build()
-        .execute(&tx)?;
-
-    tx.commit()?;
+        .execute(tx)?;
 
     Ok(())
 }
