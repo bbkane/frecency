@@ -20,15 +20,15 @@ pub struct AddArgs {
 }
 
 pub fn add(tx: &mut Transaction<'_>, args: AddArgs) -> Result<(), Box<dyn Error>> {
-    let row = queries::InsertOrUpdateItem::builder()
+    let id = queries::InsertOrUpdateItem::builder()
         .item(&args.key)
         .base_score(args.base_score)
         .create_time(args.create_time.as_second())
         .update_time(args.update_time.as_second())
         .build()
-        .query_one(tx)?;
+        .query_one(tx)?
+        .id;
 
-    let id = row.id;
     queries::InsertIntoAccessLog::builder()
         .item_id(id)
         .access_time(args.create_time.as_second())
