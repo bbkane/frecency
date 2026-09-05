@@ -37,3 +37,31 @@ pub fn add(tx: &mut Transaction<'_>, args: AddArgs) -> Result<(), Box<dyn Error>
 
     Ok(())
 }
+
+#[derive(Args)]
+pub struct QueryArgs {
+    #[arg(long, default_value_t = 500)]
+    pub limit: i64,
+
+    #[arg(long, default_value_t = String::from(""))]
+    pub prefix: String,
+
+    #[arg(long, default_value_t = String::from("\t"))]
+    pub sep: String,
+}
+pub fn query(tx: &mut Transaction<'_>, args: QueryArgs) -> Result<(), Box<dyn Error>> {
+    // TODO: how do I generate something better than column_1 as a name?
+    let results = queries::QuerySelectFromItemFrecency::builder()
+        .column_1(Some(&args.prefix))
+        .limit(args.limit)
+        .build()
+        .query_many(tx)?;
+
+    for res in results {
+        let (item, frecency_score) = (res.item, res.frecency_score);
+        let sep = &args.sep;
+        println!("{frecency_score}{sep}{item}");
+    }
+
+    Ok(())
+}

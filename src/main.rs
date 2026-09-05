@@ -23,14 +23,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Print version")]
-    Version,
-
-    #[command(about = "Say hello")]
+    #[command(about = "Add item")]
     Add(commands::AddArgs),
+    #[command(about = "List items and frecency scores")]
+    Query(commands::QueryArgs),
 
+    // generic commands
     #[command(about = "Print shell completion scripts")]
     Completion { shell: Shell },
+    #[command(about = "Print version")]
+    Version,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -45,15 +47,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match args.command {
         Commands::Add(args) => commands::add(&mut tx, args)?,
+        Commands::Query(args) => commands::query(&mut tx, args)?,
 
-        // non-app specific
-        Commands::Version => println!("v{}", env!("CARGO_PKG_VERSION")),
+        // generic commands
         Commands::Completion { shell } => generate(
             shell,
             &mut Cli::command(),
             env!("CARGO_PKG_NAME"),
             &mut std::io::stdout(),
         ),
+        Commands::Version => println!("v{}", env!("CARGO_PKG_VERSION")),
     }
     tx.commit()?;
     Ok(())

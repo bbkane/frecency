@@ -226,3 +226,88 @@ impl<'a> InsertIntoAccessLogBuilder<'a, (i64, i64)> {
         }
     }
 }
+pub struct QuerySelectFromItemFrecencyRow {
+    pub item: String,
+    pub frecency_score: f64,
+}
+impl QuerySelectFromItemFrecencyRow {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self {
+            item: row.get(0)?,
+            frecency_score: row.get(1)?,
+        })
+    }
+}
+pub struct QuerySelectFromItemFrecency<'a> {
+    column_1: Option<&'a str>,
+    limit: i64,
+}
+impl<'a> QuerySelectFromItemFrecency<'a> {
+    pub const QUERY: &'static str = r"SELECT item, frecency_score FROM item_frecency
+WHERE item LIKE ? || '%'
+ORDER BY frecency_score DESC
+LIMIT ?";
+    pub fn query_str(&self) -> &str {
+        Self::QUERY
+    }
+}
+impl<'a> QuerySelectFromItemFrecency<'a> {
+    pub fn query_many(
+        &self,
+        client: &impl RusqliteClient,
+    ) -> rusqlite::Result<Vec<QuerySelectFromItemFrecencyRow>> {
+        self.prepare(client)?
+            .query_map(self.as_params(), QuerySelectFromItemFrecencyRow::from_row)?
+            .collect()
+    }
+    pub fn prepare<'conn>(
+        &self,
+        client: &'conn impl RusqliteClient,
+    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
+        client.prepare(self.query_str())
+    }
+    pub fn as_params(&self) -> impl rusqlite::Params {
+        (self.column_1, self.limit)
+    }
+}
+impl<'a> QuerySelectFromItemFrecency<'a> {
+    pub const fn builder() -> QuerySelectFromItemFrecencyBuilder<'a, ((), ())> {
+        QuerySelectFromItemFrecencyBuilder {
+            fields: ((), ()),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+pub struct QuerySelectFromItemFrecencyBuilder<'a, Fields = ((), ())> {
+    fields: Fields,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+impl<'a, Limit> QuerySelectFromItemFrecencyBuilder<'a, ((), Limit)> {
+    pub fn column_1(
+        self,
+        column_1: Option<&'a str>,
+    ) -> QuerySelectFromItemFrecencyBuilder<'a, (Option<&'a str>, Limit)> {
+        let ((), limit) = self.fields;
+        let _phantom = self._phantom;
+        QuerySelectFromItemFrecencyBuilder {
+            fields: (column_1, limit),
+            _phantom,
+        }
+    }
+}
+impl<'a, Column1> QuerySelectFromItemFrecencyBuilder<'a, (Column1, ())> {
+    pub fn limit(self, limit: i64) -> QuerySelectFromItemFrecencyBuilder<'a, (Column1, i64)> {
+        let (column_1, ()) = self.fields;
+        let _phantom = self._phantom;
+        QuerySelectFromItemFrecencyBuilder {
+            fields: (column_1, limit),
+            _phantom,
+        }
+    }
+}
+impl<'a> QuerySelectFromItemFrecencyBuilder<'a, (Option<&'a str>, i64)> {
+    pub fn build(self) -> QuerySelectFromItemFrecency<'a> {
+        let (column_1, limit) = self.fields;
+        QuerySelectFromItemFrecency { column_1, limit }
+    }
+}
