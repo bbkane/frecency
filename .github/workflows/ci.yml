@@ -40,6 +40,8 @@ jobs:
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           taplo fmt --check
   test:
+    env:
+      CI: 'true'
     name: Test Suite
     runs-on: ubuntu-latest
     steps:

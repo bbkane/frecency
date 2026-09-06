@@ -40,6 +40,9 @@ pub fn add(tx: &mut Transaction<'_>, args: AddArgs) -> Result<(), Box<dyn Error>
 
 #[derive(Args)]
 pub struct QueryArgs {
+    #[arg(long, default_value_t = Timestamp::now())]
+    pub now: Timestamp,
+
     #[arg(long, default_value_t = 500)]
     pub limit: i64,
 
@@ -50,9 +53,9 @@ pub struct QueryArgs {
     pub sep: String,
 }
 pub fn query(tx: &mut Transaction<'_>, args: QueryArgs) -> Result<(), Box<dyn Error>> {
-    // TODO: how do I generate something better than column_1 as a name?
     let results = queries::QuerySelectFromItemFrecency::builder()
-        .column_1(Some(&args.prefix))
+        .now(args.now.as_second())
+        .prefix(Some(&args.prefix))
         .limit(args.limit)
         .build()
         .query_many(tx)?;

@@ -10,3 +10,12 @@ clap_complete = "4.6.7"
 jiff = "0.2.35"
 rusqlite = { version = "0.32", features = ["bundled"] }
 rust-embed = "8"
+
+[dev-dependencies]
+insta = "1.48.0"
+insta-cmd = "0.7.0"
+tempfile = "3.27.0"
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
