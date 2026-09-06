@@ -1,0 +1,28 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-XE7im0/test_prune_database_filters.db
+    - prune
+    - "--score-below"
+    - "10"
+    - "--prefix"
+    - /prune/
+    - "--created-before"
+    - "0001-01-01T01:00:00Z"
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+    - "--dry-run"
+    - "true"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Dry run - run with `--dry-run false` to actually prune
+Deleted:
+  /prune/alpha
+Summary: deleted 1 item and 2 accesses
+
+----- stderr -----

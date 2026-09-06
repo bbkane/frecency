@@ -1,0 +1,17 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-QLesoY/test_prune_validation.db
+    - prune
+    - "--prefix"
+    - ""
+---
+success: false
+exit_code: 1
+----- stdout -----
+
+----- stderr -----
+Error: Custom { kind: InvalidInput, error: "--prefix must not be empty" }

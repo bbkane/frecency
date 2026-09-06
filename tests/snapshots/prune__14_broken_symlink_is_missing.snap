@@ -1,0 +1,22 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-ggdRPh/test_prune_missing.db
+    - prune
+    - "--missing"
+    - "true"
+    - "--quiet"
+    - "true"
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+    - "--dry-run"
+    - "false"
+---
+success: true
+exit_code: 0
+----- stdout -----
+
+----- stderr -----

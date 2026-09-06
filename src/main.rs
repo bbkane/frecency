@@ -25,12 +25,14 @@ struct Cli {
 enum Commands {
     #[command(about = "Add item")]
     Add(commands::AddArgs),
-    #[command(about = "Update item")]
-    Update(commands::UpdateArgs),
     #[command(about = "Delete item")]
     Delete(commands::DeleteArgs),
+    #[command(about = "Prune items matching selection filters")]
+    Prune(commands::PruneArgs),
     #[command(about = "List items and frecency scores")]
     Query(commands::QueryArgs),
+    #[command(about = "Update item")]
+    Update(commands::UpdateArgs),
 
     // generic commands
     #[command(about = "Print shell completion scripts")]
@@ -53,6 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Commands::Add(args) => commands::add(&mut tx, args)?,
         Commands::Update(args) => commands::update(&mut tx, args)?,
         Commands::Delete(args) => commands::delete(&mut tx, args)?,
+        Commands::Prune(args) => commands::prune(&mut tx, args)?,
         Commands::Query(args) => commands::query(&mut tx, args)?,
 
         // generic commands

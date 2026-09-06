@@ -1,0 +1,23 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-ggdRPh/test_prune_missing.db
+    - prune
+    - "--missing"
+    - "true"
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+    - "--dry-run"
+    - "false"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Deleted:
+  /tmp/frecency-prune-test-path-that-does-not-exist
+Summary: deleted 1 item and 1 access
+
+----- stderr -----

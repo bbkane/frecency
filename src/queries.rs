@@ -422,6 +422,420 @@ impl<'a> DeleteItemBuilder<'a, (&'a str,)> {
         DeleteItem { key }
     }
 }
+pub struct SelectPruneCandidatesRow {
+    pub id: i64,
+    pub item: String,
+    pub access_count: i64,
+}
+impl SelectPruneCandidatesRow {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self {
+            id: row.get(0)?,
+            item: row.get(1)?,
+            access_count: row.get(2)?,
+        })
+    }
+}
+pub struct SelectPruneCandidates<'a> {
+    score_below: Option<f64>,
+    prefix: Option<&'a str>,
+    last_access_before: Option<i64>,
+    created_before: Option<i64>,
+    updated_before: Option<i64>,
+    now: i64,
+}
+impl<'a> SelectPruneCandidates<'a> {
+    pub const QUERY: &'static str = r"WITH candidates AS (
+  SELECT
+    i.id,
+    i.item,
+    CAST(COUNT(l.id) AS INTEGER) AS access_count,
+    CAST(COALESCE(MAX(l.access_time), i.create_time) AS INTEGER) AS last_access_time,
+    CAST(i.base_score
+    + COALESCE(
+      SUM(1.0 / (1.0 + MAX(?6 - l.access_time, 0) / 604800.0)),
+      0
+    ) AS REAL) AS frecency_score,
+    i.create_time,
+    i.update_time
+  FROM item AS i
+  LEFT JOIN access_log AS l ON l.item_id = i.id
+  GROUP BY
+    i.id,
+    i.item,
+    i.base_score,
+    i.create_time,
+    i.update_time
+)
+SELECT id, item, access_count
+FROM candidates
+WHERE (?1 IS NULL OR frecency_score < ?1)
+  AND (
+    CAST(?2 AS TEXT) IS NULL
+    OR substr(item, 1, length(CAST(?2 AS TEXT))) = CAST(?2 AS TEXT)
+  )
+  AND (
+    CAST(?3 AS INTEGER) IS NULL
+    OR last_access_time <= CAST(?3 AS INTEGER)
+  )
+  AND (
+    CAST(?4 AS INTEGER) IS NULL
+    OR create_time < CAST(?4 AS INTEGER)
+  )
+  AND (
+    CAST(?5 AS INTEGER) IS NULL
+    OR update_time < CAST(?5 AS INTEGER)
+  )
+ORDER BY item";
+    pub fn query_str(&self) -> &str {
+        Self::QUERY
+    }
+}
+impl<'a> SelectPruneCandidates<'a> {
+    pub fn query_many(
+        &self,
+        client: &impl RusqliteClient,
+    ) -> rusqlite::Result<Vec<SelectPruneCandidatesRow>> {
+        self.prepare(client)?
+            .query_map(self.as_params(), SelectPruneCandidatesRow::from_row)?
+            .collect()
+    }
+    pub fn prepare<'conn>(
+        &self,
+        client: &'conn impl RusqliteClient,
+    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
+        client.prepare(self.query_str())
+    }
+    pub fn as_params(&self) -> impl rusqlite::Params {
+        (
+            self.score_below,
+            self.prefix,
+            self.last_access_before,
+            self.created_before,
+            self.updated_before,
+            self.now,
+        )
+    }
+}
+impl<'a> SelectPruneCandidates<'a> {
+    pub const fn builder() -> SelectPruneCandidatesBuilder<'a, ((), (), (), (), (), ())> {
+        SelectPruneCandidatesBuilder {
+            fields: ((), (), (), (), (), ()),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+pub struct SelectPruneCandidatesBuilder<'a, Fields = ((), (), (), (), (), ())> {
+    fields: Fields,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+impl<'a, Prefix, LastAccessBefore, CreatedBefore, UpdatedBefore, Now>
+    SelectPruneCandidatesBuilder<
+        'a,
+        (
+            (),
+            Prefix,
+            LastAccessBefore,
+            CreatedBefore,
+            UpdatedBefore,
+            Now,
+        ),
+    >
+{
+    pub fn score_below(
+        self,
+        score_below: Option<f64>,
+    ) -> SelectPruneCandidatesBuilder<
+        'a,
+        (
+            Option<f64>,
+            Prefix,
+            LastAccessBefore,
+            CreatedBefore,
+            UpdatedBefore,
+            Now,
+        ),
+    > {
+        let ((), prefix, last_access_before, created_before, updated_before, now) = self.fields;
+        let _phantom = self._phantom;
+        SelectPruneCandidatesBuilder {
+            fields: (
+                score_below,
+                prefix,
+                last_access_before,
+                created_before,
+                updated_before,
+                now,
+            ),
+            _phantom,
+        }
+    }
+}
+impl<'a, ScoreBelow, LastAccessBefore, CreatedBefore, UpdatedBefore, Now>
+    SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            (),
+            LastAccessBefore,
+            CreatedBefore,
+            UpdatedBefore,
+            Now,
+        ),
+    >
+{
+    pub fn prefix(
+        self,
+        prefix: Option<&'a str>,
+    ) -> SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            Option<&'a str>,
+            LastAccessBefore,
+            CreatedBefore,
+            UpdatedBefore,
+            Now,
+        ),
+    > {
+        let (score_below, (), last_access_before, created_before, updated_before, now) =
+            self.fields;
+        let _phantom = self._phantom;
+        SelectPruneCandidatesBuilder {
+            fields: (
+                score_below,
+                prefix,
+                last_access_before,
+                created_before,
+                updated_before,
+                now,
+            ),
+            _phantom,
+        }
+    }
+}
+impl<'a, ScoreBelow, Prefix, CreatedBefore, UpdatedBefore, Now>
+    SelectPruneCandidatesBuilder<'a, (ScoreBelow, Prefix, (), CreatedBefore, UpdatedBefore, Now)>
+{
+    pub fn last_access_before(
+        self,
+        last_access_before: Option<i64>,
+    ) -> SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            Prefix,
+            Option<i64>,
+            CreatedBefore,
+            UpdatedBefore,
+            Now,
+        ),
+    > {
+        let (score_below, prefix, (), created_before, updated_before, now) = self.fields;
+        let _phantom = self._phantom;
+        SelectPruneCandidatesBuilder {
+            fields: (
+                score_below,
+                prefix,
+                last_access_before,
+                created_before,
+                updated_before,
+                now,
+            ),
+            _phantom,
+        }
+    }
+}
+impl<'a, ScoreBelow, Prefix, LastAccessBefore, UpdatedBefore, Now>
+    SelectPruneCandidatesBuilder<'a, (ScoreBelow, Prefix, LastAccessBefore, (), UpdatedBefore, Now)>
+{
+    pub fn created_before(
+        self,
+        created_before: Option<i64>,
+    ) -> SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            Prefix,
+            LastAccessBefore,
+            Option<i64>,
+            UpdatedBefore,
+            Now,
+        ),
+    > {
+        let (score_below, prefix, last_access_before, (), updated_before, now) = self.fields;
+        let _phantom = self._phantom;
+        SelectPruneCandidatesBuilder {
+            fields: (
+                score_below,
+                prefix,
+                last_access_before,
+                created_before,
+                updated_before,
+                now,
+            ),
+            _phantom,
+        }
+    }
+}
+impl<'a, ScoreBelow, Prefix, LastAccessBefore, CreatedBefore, Now>
+    SelectPruneCandidatesBuilder<'a, (ScoreBelow, Prefix, LastAccessBefore, CreatedBefore, (), Now)>
+{
+    pub fn updated_before(
+        self,
+        updated_before: Option<i64>,
+    ) -> SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            Prefix,
+            LastAccessBefore,
+            CreatedBefore,
+            Option<i64>,
+            Now,
+        ),
+    > {
+        let (score_below, prefix, last_access_before, created_before, (), now) = self.fields;
+        let _phantom = self._phantom;
+        SelectPruneCandidatesBuilder {
+            fields: (
+                score_below,
+                prefix,
+                last_access_before,
+                created_before,
+                updated_before,
+                now,
+            ),
+            _phantom,
+        }
+    }
+}
+impl<'a, ScoreBelow, Prefix, LastAccessBefore, CreatedBefore, UpdatedBefore>
+    SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            Prefix,
+            LastAccessBefore,
+            CreatedBefore,
+            UpdatedBefore,
+            (),
+        ),
+    >
+{
+    pub fn now(
+        self,
+        now: i64,
+    ) -> SelectPruneCandidatesBuilder<
+        'a,
+        (
+            ScoreBelow,
+            Prefix,
+            LastAccessBefore,
+            CreatedBefore,
+            UpdatedBefore,
+            i64,
+        ),
+    > {
+        let (score_below, prefix, last_access_before, created_before, updated_before, ()) =
+            self.fields;
+        let _phantom = self._phantom;
+        SelectPruneCandidatesBuilder {
+            fields: (
+                score_below,
+                prefix,
+                last_access_before,
+                created_before,
+                updated_before,
+                now,
+            ),
+            _phantom,
+        }
+    }
+}
+impl<'a>
+    SelectPruneCandidatesBuilder<
+        'a,
+        (
+            Option<f64>,
+            Option<&'a str>,
+            Option<i64>,
+            Option<i64>,
+            Option<i64>,
+            i64,
+        ),
+    >
+{
+    pub fn build(self) -> SelectPruneCandidates<'a> {
+        let (score_below, prefix, last_access_before, created_before, updated_before, now) =
+            self.fields;
+        SelectPruneCandidates {
+            score_below,
+            prefix,
+            last_access_before,
+            created_before,
+            updated_before,
+            now,
+        }
+    }
+}
+pub struct DeleteItemByIdRow {}
+impl DeleteItemByIdRow {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self {})
+    }
+}
+pub struct DeleteItemById {
+    id: i64,
+}
+impl DeleteItemById {
+    pub const QUERY: &'static str = r"DELETE FROM item WHERE id = ?1";
+    pub fn query_str(&self) -> &str {
+        Self::QUERY
+    }
+}
+impl DeleteItemById {
+    pub fn execute(&self, client: &impl RusqliteClient) -> rusqlite::Result<usize> {
+        self.prepare(client)?.execute(self.as_params())
+    }
+    pub fn prepare<'conn>(
+        &self,
+        client: &'conn impl RusqliteClient,
+    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
+        client.prepare(self.query_str())
+    }
+    pub fn as_params(&self) -> impl rusqlite::Params {
+        (self.id,)
+    }
+}
+impl DeleteItemById {
+    pub const fn builder() -> DeleteItemByIdBuilder<'static, ((),)> {
+        DeleteItemByIdBuilder {
+            fields: ((),),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+pub struct DeleteItemByIdBuilder<'a, Fields = ((),)> {
+    fields: Fields,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+impl<'a> DeleteItemByIdBuilder<'a, ((),)> {
+    pub fn id(self, id: i64) -> DeleteItemByIdBuilder<'a, (i64,)> {
+        let ((),) = self.fields;
+        let _phantom = self._phantom;
+        DeleteItemByIdBuilder {
+            fields: (id,),
+            _phantom,
+        }
+    }
+}
+impl<'a> DeleteItemByIdBuilder<'a, (i64,)> {
+    pub fn build(self) -> DeleteItemById {
+        let (id,) = self.fields;
+        DeleteItemById { id }
+    }
+}
 pub struct QuerySelectFromItemFrecencyRow {
     pub item: String,
     pub frecency_score: f64,

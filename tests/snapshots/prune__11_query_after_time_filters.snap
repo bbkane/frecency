@@ -1,0 +1,17 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-o2e2gY/test_prune_time_filters.db
+    - query
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+---
+success: true
+exit_code: 0
+----- stdout -----
+0.30434782608695654	/fresh
+
+----- stderr -----

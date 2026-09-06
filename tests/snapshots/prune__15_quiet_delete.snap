@@ -1,0 +1,22 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-b4YQwP/test_prune_quiet.db
+    - prune
+    - "--prefix"
+    - /quiet-delete
+    - "--quiet"
+    - "true"
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+    - "--dry-run"
+    - "false"
+---
+success: true
+exit_code: 0
+----- stdout -----
+
+----- stderr -----

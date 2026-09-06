@@ -1,0 +1,19 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-XE7im0/test_prune_database_filters.db
+    - query
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+---
+success: true
+exit_code: 0
+----- stdout -----
+20.148936170212767	/prune/beta
+1.2980044931941324	/prune/alpha
+1.148936170212766	/keep/gamma
+
+----- stderr -----

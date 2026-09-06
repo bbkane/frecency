@@ -1,0 +1,19 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-QLesoY/test_prune_validation.db
+    - prune
+    - "--missing"
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: a value is required for '--missing <MISSING>' but none was supplied
+  [possible values: true, false]
+
+For more information, try '--help'.

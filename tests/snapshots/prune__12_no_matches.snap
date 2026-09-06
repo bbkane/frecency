@@ -1,0 +1,20 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-5DYEJ0/test_prune_time_filters.db
+    - prune
+    - "--updated-before"
+    - "0001-01-01T00:00:00Z"
+    - "--now"
+    - "0001-02-10T00:00:00Z"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Dry run - run with `--dry-run false` to actually prune
+Summary: deleted 0 items and 0 accesses
+
+----- stderr -----

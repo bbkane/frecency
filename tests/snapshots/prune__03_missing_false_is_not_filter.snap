@@ -1,0 +1,17 @@
+---
+source: tests/prune.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-QLesoY/test_prune_validation.db
+    - prune
+    - "--missing"
+    - "false"
+---
+success: false
+exit_code: 1
+----- stdout -----
+
+----- stderr -----
+Error: Custom { kind: InvalidInput, error: "prune requires at least one selection filter" }
