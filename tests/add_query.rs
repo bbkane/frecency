@@ -15,7 +15,7 @@ fn test_add_query() {
     let bin = get_cargo_bin("frecency");
 
     assert_cmd_snapshot!(
-        "add",
+        "01_add",
         Command::new(&bin)
             .args([
                 "add",
@@ -33,7 +33,7 @@ fn test_add_query() {
     );
 
     assert_cmd_snapshot!(
-        "query_after_add",
+        "02_query_after_add",
         Command::new(&bin)
             .args(["query", "--now", TWO_TIME, "--db-path"])
             .arg(&db_path)

@@ -25,6 +25,10 @@ struct Cli {
 enum Commands {
     #[command(about = "Add item")]
     Add(commands::AddArgs),
+    #[command(about = "Update item")]
+    Update(commands::UpdateArgs),
+    #[command(about = "Delete item")]
+    Delete(commands::DeleteArgs),
     #[command(about = "List items and frecency scores")]
     Query(commands::QueryArgs),
 
@@ -47,6 +51,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match args.command {
         Commands::Add(args) => commands::add(&mut tx, args)?,
+        Commands::Update(args) => commands::update(&mut tx, args)?,
+        Commands::Delete(args) => commands::delete(&mut tx, args)?,
         Commands::Query(args) => commands::query(&mut tx, args)?,
 
         // generic commands

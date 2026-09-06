@@ -1,0 +1,22 @@
+---
+source: tests/add_query.rs
+info:
+  program: frecency
+  args:
+    - add
+    - "--key"
+    - key
+    - "--base-score"
+    - "10"
+    - "--create-time"
+    - "0001-01-01T00:00:00Z"
+    - "--update-time"
+    - "0001-01-01T01:00:00Z"
+    - "--db-path"
+    - /tmp/frecency-7QTVMr/test_add_query.db
+---
+success: true
+exit_code: 0
+----- stdout -----
+
+----- stderr -----

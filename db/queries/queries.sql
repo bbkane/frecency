@@ -9,6 +9,20 @@ RETURNING id;
 -- name: InsertIntoAccessLog :exec
 INSERT INTO access_log(item_id, access_time) VALUES (?, ?);
 
+-- name: UpdateItem :one
+UPDATE item
+SET
+  item = COALESCE(sqlc.narg(new_key), item),
+  base_score = COALESCE(sqlc.narg(base_score), base_score),
+  update_time = sqlc.arg(update_time)
+WHERE item = sqlc.arg(key)
+RETURNING id;
+
+-- name: DeleteItem :one
+DELETE FROM item
+WHERE item = sqlc.arg(key)
+RETURNING id;
+
 -- name: QuerySelectFromItemFrecency :many
 SELECT
   i.item,

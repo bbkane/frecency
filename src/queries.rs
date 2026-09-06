@@ -226,6 +226,202 @@ impl<'a> InsertIntoAccessLogBuilder<'a, (i64, i64)> {
         }
     }
 }
+pub struct UpdateItemRow {
+    pub id: i64,
+}
+impl UpdateItemRow {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self { id: row.get(0)? })
+    }
+}
+pub struct UpdateItem<'a> {
+    new_key: Option<&'a str>,
+    base_score: Option<i64>,
+    update_time: i64,
+    key: &'a str,
+}
+impl<'a> UpdateItem<'a> {
+    pub const QUERY: &'static str = r"UPDATE item
+SET
+  item = COALESCE(?1, item),
+  base_score = COALESCE(?2, base_score),
+  update_time = ?3
+WHERE item = ?4
+RETURNING id";
+    pub fn query_str(&self) -> &str {
+        Self::QUERY
+    }
+}
+impl<'a> UpdateItem<'a> {
+    pub fn query_one(&self, client: &impl RusqliteClient) -> rusqlite::Result<UpdateItemRow> {
+        self.prepare(client)?
+            .query_row(self.as_params(), UpdateItemRow::from_row)
+    }
+    pub fn query_opt(
+        &self,
+        client: &impl RusqliteClient,
+    ) -> rusqlite::Result<Option<UpdateItemRow>> {
+        self.prepare(client)?
+            .query_map(self.as_params(), UpdateItemRow::from_row)?
+            .next()
+            .transpose()
+    }
+    pub fn prepare<'conn>(
+        &self,
+        client: &'conn impl RusqliteClient,
+    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
+        client.prepare(self.query_str())
+    }
+    pub fn as_params(&self) -> impl rusqlite::Params {
+        (self.new_key, self.base_score, self.update_time, self.key)
+    }
+}
+impl<'a> UpdateItem<'a> {
+    pub const fn builder() -> UpdateItemBuilder<'a, ((), (), (), ())> {
+        UpdateItemBuilder {
+            fields: ((), (), (), ()),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+pub struct UpdateItemBuilder<'a, Fields = ((), (), (), ())> {
+    fields: Fields,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+impl<'a, BaseScore, UpdateTime, Key> UpdateItemBuilder<'a, ((), BaseScore, UpdateTime, Key)> {
+    pub fn new_key(
+        self,
+        new_key: Option<&'a str>,
+    ) -> UpdateItemBuilder<'a, (Option<&'a str>, BaseScore, UpdateTime, Key)> {
+        let ((), base_score, update_time, key) = self.fields;
+        let _phantom = self._phantom;
+        UpdateItemBuilder {
+            fields: (new_key, base_score, update_time, key),
+            _phantom,
+        }
+    }
+}
+impl<'a, NewKey, UpdateTime, Key> UpdateItemBuilder<'a, (NewKey, (), UpdateTime, Key)> {
+    pub fn base_score(
+        self,
+        base_score: Option<i64>,
+    ) -> UpdateItemBuilder<'a, (NewKey, Option<i64>, UpdateTime, Key)> {
+        let (new_key, (), update_time, key) = self.fields;
+        let _phantom = self._phantom;
+        UpdateItemBuilder {
+            fields: (new_key, base_score, update_time, key),
+            _phantom,
+        }
+    }
+}
+impl<'a, NewKey, BaseScore, Key> UpdateItemBuilder<'a, (NewKey, BaseScore, (), Key)> {
+    pub fn update_time(
+        self,
+        update_time: i64,
+    ) -> UpdateItemBuilder<'a, (NewKey, BaseScore, i64, Key)> {
+        let (new_key, base_score, (), key) = self.fields;
+        let _phantom = self._phantom;
+        UpdateItemBuilder {
+            fields: (new_key, base_score, update_time, key),
+            _phantom,
+        }
+    }
+}
+impl<'a, NewKey, BaseScore, UpdateTime> UpdateItemBuilder<'a, (NewKey, BaseScore, UpdateTime, ())> {
+    pub fn key(
+        self,
+        key: &'a str,
+    ) -> UpdateItemBuilder<'a, (NewKey, BaseScore, UpdateTime, &'a str)> {
+        let (new_key, base_score, update_time, ()) = self.fields;
+        let _phantom = self._phantom;
+        UpdateItemBuilder {
+            fields: (new_key, base_score, update_time, key),
+            _phantom,
+        }
+    }
+}
+impl<'a> UpdateItemBuilder<'a, (Option<&'a str>, Option<i64>, i64, &'a str)> {
+    pub fn build(self) -> UpdateItem<'a> {
+        let (new_key, base_score, update_time, key) = self.fields;
+        UpdateItem {
+            new_key,
+            base_score,
+            update_time,
+            key,
+        }
+    }
+}
+pub struct DeleteItemRow {
+    pub id: i64,
+}
+impl DeleteItemRow {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self { id: row.get(0)? })
+    }
+}
+pub struct DeleteItem<'a> {
+    key: &'a str,
+}
+impl<'a> DeleteItem<'a> {
+    pub const QUERY: &'static str = r"DELETE FROM item
+WHERE item = ?1
+RETURNING id";
+    pub fn query_str(&self) -> &str {
+        Self::QUERY
+    }
+}
+impl<'a> DeleteItem<'a> {
+    pub fn query_one(&self, client: &impl RusqliteClient) -> rusqlite::Result<DeleteItemRow> {
+        self.prepare(client)?
+            .query_row(self.as_params(), DeleteItemRow::from_row)
+    }
+    pub fn query_opt(
+        &self,
+        client: &impl RusqliteClient,
+    ) -> rusqlite::Result<Option<DeleteItemRow>> {
+        self.prepare(client)?
+            .query_map(self.as_params(), DeleteItemRow::from_row)?
+            .next()
+            .transpose()
+    }
+    pub fn prepare<'conn>(
+        &self,
+        client: &'conn impl RusqliteClient,
+    ) -> rusqlite::Result<rusqlite::Statement<'conn>> {
+        client.prepare(self.query_str())
+    }
+    pub fn as_params(&self) -> impl rusqlite::Params {
+        (self.key,)
+    }
+}
+impl<'a> DeleteItem<'a> {
+    pub const fn builder() -> DeleteItemBuilder<'a, ((),)> {
+        DeleteItemBuilder {
+            fields: ((),),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+pub struct DeleteItemBuilder<'a, Fields = ((),)> {
+    fields: Fields,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+impl<'a> DeleteItemBuilder<'a, ((),)> {
+    pub fn key(self, key: &'a str) -> DeleteItemBuilder<'a, (&'a str,)> {
+        let ((),) = self.fields;
+        let _phantom = self._phantom;
+        DeleteItemBuilder {
+            fields: (key,),
+            _phantom,
+        }
+    }
+}
+impl<'a> DeleteItemBuilder<'a, (&'a str,)> {
+    pub fn build(self) -> DeleteItem<'a> {
+        let (key,) = self.fields;
+        DeleteItem { key }
+    }
+}
 pub struct QuerySelectFromItemFrecencyRow {
     pub item: String,
     pub frecency_score: f64,

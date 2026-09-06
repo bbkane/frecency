@@ -1,19 +1,17 @@
 ---
-source: tests/add_query.rs
+source: tests/update_delete.rs
 info:
   program: frecency
   args:
+    - "--db-path"
+    - /tmp/frecency-vZE0rJ/test_update_delete.db
     - add
     - "--key"
     - key
-    - "--base-score"
-    - "10"
     - "--create-time"
     - "0001-01-01T00:00:00Z"
     - "--update-time"
-    - "0001-01-01T01:00:00Z"
-    - "--db-path"
-    - /tmp/frecency-hfCOxT/test_add_query.db
+    - "0001-01-01T00:00:00Z"
 ---
 success: true
 exit_code: 0

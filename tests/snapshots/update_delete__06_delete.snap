@@ -1,0 +1,16 @@
+---
+source: tests/update_delete.rs
+info:
+  program: frecency
+  args:
+    - "--db-path"
+    - /tmp/frecency-vZE0rJ/test_update_delete.db
+    - delete
+    - "--key"
+    - new-key
+---
+success: true
+exit_code: 0
+----- stdout -----
+
+----- stderr -----

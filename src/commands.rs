@@ -39,6 +39,48 @@ pub fn add(tx: &mut Transaction<'_>, args: AddArgs) -> Result<(), Box<dyn Error>
 }
 
 #[derive(Args)]
+pub struct UpdateArgs {
+    #[arg(long)]
+    pub key: String,
+
+    #[arg(long)]
+    pub base_score: Option<i64>,
+
+    #[arg(long, default_value_t = Timestamp::now())]
+    pub update_time: Timestamp,
+
+    #[arg(long)]
+    pub new_key: Option<String>,
+}
+
+pub fn update(tx: &mut Transaction<'_>, args: UpdateArgs) -> Result<(), Box<dyn Error>> {
+    queries::UpdateItem::builder()
+        .new_key(args.new_key.as_deref())
+        .base_score(args.base_score)
+        .update_time(args.update_time.as_second())
+        .key(&args.key)
+        .build()
+        .query_one(tx)?;
+
+    Ok(())
+}
+
+#[derive(Args)]
+pub struct DeleteArgs {
+    #[arg(long)]
+    pub key: String,
+}
+
+pub fn delete(tx: &mut Transaction<'_>, args: DeleteArgs) -> Result<(), Box<dyn Error>> {
+    queries::DeleteItem::builder()
+        .key(&args.key)
+        .build()
+        .query_one(tx)?;
+
+    Ok(())
+}
+
+#[derive(Args)]
 pub struct QueryArgs {
     #[arg(long, default_value_t = Timestamp::now())]
     pub now: Timestamp,

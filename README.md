@@ -22,14 +22,26 @@ Install `cargo-insta`:
 cargo install cargo-insta
 ```
 
-Then after adding a test you need to run
+Run snapshot tests:
 
 ```bash
 cargo insta test
 ```
 
+Inspect every `.snap.new` file, then accept the snapshots without opening the review TUI:
+
+```bash
+cargo insta accept
+```
+
+Or (if not an agent), use the TUI to do this manually:
+
 ```bash
 cargo insta review
 ```
 
-to accept the snapshot
+Delete snapshots that are no longer referenced by tests:
+
+```bash
+cargo insta test --unreferenced delete
+```
