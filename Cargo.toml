@@ -2,7 +2,7 @@
 default-run = "frecency"
 edition = "2024"
 name = "frecency"
-version = "0.0.0"
+version = "0.0.1"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
